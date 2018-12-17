@@ -3,6 +3,7 @@ using Superpower.Model;
 using Superpower.Parsers;
 using System.Collections.Generic;
 using System.Linq;
+using CommandLineParserPoC.Superpower;
 
 namespace CommandLineParserPoC
 {
