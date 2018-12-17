@@ -138,7 +138,7 @@ namespace CommandLineParserPoC.Tests
                     ShortName = 'a',
                     LongName = "all-that",
                     Description = "Desc 1",
-                    Type = SwitchType.String,
+                    Type = SwitchType.Value,
                     SetValue = a => o.String1 = a
                 }
             };
@@ -158,7 +158,7 @@ namespace CommandLineParserPoC.Tests
                     ShortName = 'a',
                     LongName = "all-that",
                     Description = "Desc 1",
-                    Type = SwitchType.Int,
+                    Type = SwitchType.Value,
                     SetValue = a =>
                     {
                         int v;
@@ -185,7 +185,7 @@ namespace CommandLineParserPoC.Tests
                     ShortName = 'a',
                     LongName = "all-that",
                     Description = "Desc 1",
-                    Type = SwitchType.Int,
+                    Type = SwitchType.Value,
                     SetValue = a =>
                     {
                         int v;
@@ -201,7 +201,7 @@ namespace CommandLineParserPoC.Tests
 
             CommandLineParser.Parse(new[] { "-a", "77" }, sd);
             Assert.AreEqual(o.Int1, 77);
-        }
+        }        
         [TestMethod]
         public void TestList()
         {
@@ -229,7 +229,7 @@ namespace CommandLineParserPoC.Tests
                     ShortName = 'c',
                     LongName = "capla",
                     Description = "Desc 1",
-                    Type = SwitchType.String,
+                    Type = SwitchType.Value,
                     SetValue = a => o.String1 = a
                 }
 
@@ -256,7 +256,7 @@ namespace CommandLineParserPoC.Tests
                     ShortName = 'a',
                     LongName = "all-that",
                     Description = "Desc 1",
-                    Type = SwitchType.QuotedList,
+                    Type = SwitchType.Value,
                     SetValue = a => o.List1 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
                 },
                 new SwitchDescription
@@ -278,6 +278,26 @@ namespace CommandLineParserPoC.Tests
             Assert.AreEqual(o.List1[4], "hello");
             Assert.AreEqual(o.List1.Length, 5);
             Assert.AreEqual(o.Binary2, true);
+        }
+
+        [TestMethod]
+        public void TestBadSequence()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'a',
+                    LongName = "all-that",
+                    Description = "Desc 1",
+                    Type = SwitchType.Value,
+                    SetValue = a => { o.String1 = a; }
+                }
+            };
+
+            Assert.ThrowsException<CommandLineParserException>(() => CommandLineParser.Parse(new[] { "-a", "Hello", "World" }, sd));
+
         }
     }
 }

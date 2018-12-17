@@ -15,9 +15,9 @@ namespace CommandLineParserPoC
         // otherwise it's not a switch but a value belonging to a prior switch
         private enum ArgumnetType
         {
-            NoValueSwitch,
-            SingleValueSwitch, //Int, String, Quouted List
-            ListOfValuesSwitch,
+            BinarySwitch,
+            ValueSwitch, //Int, String, Quouted List
+            ListSwitch,
             Value
         }
 
@@ -46,18 +46,16 @@ namespace CommandLineParserPoC
                     }
 
                     // This is a binary switch then, so it takes no value
-                    return ArgumnetType.NoValueSwitch;
+                    return ArgumnetType.BinarySwitch;
                 }
             }
             private static ArgumnetType MapSwitchTypeToTokenType(SwitchDescription sd)
             {
                 return new Dictionary<SwitchType, ArgumnetType>
                 {
-                    { SwitchType.Binary, ArgumnetType.NoValueSwitch},
-                    { SwitchType.Int, ArgumnetType.SingleValueSwitch},
-                    { SwitchType.String, ArgumnetType.SingleValueSwitch},
-                    { SwitchType.QuotedList, ArgumnetType.SingleValueSwitch},
-                    { SwitchType.List, ArgumnetType.ListOfValuesSwitch},
+                    { SwitchType.Binary, ArgumnetType.BinarySwitch},
+                    { SwitchType.Value, ArgumnetType.ValueSwitch},
+                    { SwitchType.List, ArgumnetType.ListSwitch},
                 }[sd.Type];
             }
         }
@@ -134,30 +132,24 @@ namespace CommandLineParserPoC
 
         }
 
-        // This method is also a possible improvement for Superpower
-        // E.g. public static TokenListParser<TKind, Token<TKind>> AnyKind<TKind>()
-        private static TokenListParser<TKind, Token<TKind>> TokenAnyKind<TKind>()
-        {
-            return input =>
-            {
-                var next = input.ConsumeToken();
-                if (!next.HasValue)
-                    return TokenListParserResult.Empty<TKind, Token<TKind>>(input);
-                return next;
-            };
-        }
-
         // Okay, now all ground work is done, let convert all our args to the Token List
         private TokenList<ArgumnetType> Tokenize(string[] args)
         {
-            // Three possible options: argument that does not require a value, argument that requires one ore more values, or a value
-            // If we did not match an argument whatever is left must be value
-            TextParser<Argument> any = Character.AnyChar.Many().Value(new Argument()).AtEnd();
-            // Try our three options
-            TextParser<Argument> tokenizer = _withoutValue.Try().Or(_withValue).Try().Or(any);
-            // Run the tokenizer now. The output of the tokenizer for each args[x] is and Argument instance which we use to construct the token
-            // Pitty we have to use TextSpan and will have to re-parse that again in the parser
-            return new TokenList<ArgumnetType>(args.Select(a => new Token<ArgumnetType>(tokenizer.Parse(a).ArgumnetType, new TextSpan(a))).ToArray());
+            try
+            {
+                // Three possible options: argument that does not require a value, argument that requires one ore more values, or a value
+                // If we did not match an argument whatever is left must be value
+                TextParser<Argument> any = Character.AnyChar.Many().Value(new Argument()).AtEnd();
+                // Try our three options
+                TextParser<Argument> tokenizer = _withoutValue.Try().Or(_withValue).Try().Or(any);
+                // Run the tokenizer now. The output of the tokenizer for each args[x] is and Argument instance which we use to construct the token
+                // Pitty we have to use TextSpan and will have to re-parse that again in the parser
+                return new TokenList<ArgumnetType>(args
+                    .Select(a => new Token<ArgumnetType>(tokenizer.Parse(a).ArgumnetType, new TextSpan(a))).ToArray());
+            } catch (ParseException ex)
+            {
+                throw new CommandLineParserException(ex.Message,ex);
+            }
         }
 
         // This is called by the parser when its know an argument and all its values
@@ -179,24 +171,30 @@ namespace CommandLineParserPoC
             // Note how .Apply re-parser the argument that we already parsed in the tokenized
             // Also note that SetSwitchValue is called to call the parsed value setter given to us from the outside world
             TokenListParser<ArgumnetType, Unit> binary =
-                from sw in Token.EqualTo(ArgumnetType.NoValueSwitch).Apply(x => _withoutValue)
+                from sw in Token.EqualTo(ArgumnetType.BinarySwitch).Apply(x => _withoutValue)
                 select SetSwitchValue(sw, null);
 
             TokenListParser<ArgumnetType, Unit> single =
-                from sw in Token.EqualTo(ArgumnetType.SingleValueSwitch).Apply(x => _withValue)
-                from val in TokenAnyKind<ArgumnetType>()
+                from sw in Token.EqualTo(ArgumnetType.ValueSwitch).Apply(x => _withValue)
+                from val in Token.EqualTo(ArgumnetType.Value)
                 select SetSwitchValue(sw, val.ToStringValue());
 
             TokenListParser<ArgumnetType, Unit> list =
-                from sw in Token.EqualTo(ArgumnetType.ListOfValuesSwitch).Apply(x => _withValue)
+                from sw in Token.EqualTo(ArgumnetType.ListSwitch).Apply(x => _withValue)
                 from val in Token.EqualTo(ArgumnetType.Value).AtLeastOnce()
                 select SetSwitchValue(sw, string.Join(" ", val.Select(v => v.ToStringValue())));
 
             // Let's try all the three one after another
             TokenListParser<ArgumnetType, Unit[]> parser = binary.Try().Or(single).Try().Or(list).Many().AtEnd();
 
-            // Now we run our constructed parser
-            parser.Parse(tokens);
+            try
+            {
+                // Now we run our constructed parser
+                parser.Parse(tokens);
+            } catch (ParseException ex)
+            {
+                throw new CommandLineParserException(ex.Message,ex);
+            }
         }
 
         public void Parse(string[] args)
