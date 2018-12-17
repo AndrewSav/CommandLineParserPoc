@@ -13,7 +13,7 @@ namespace CommandLineParserPoC
         // or be a switch that requires a single value that comes as the next args[x+1]
         // or a switch that can take multiple values args[x+1] ... args[x+n]
         // otherwise it's not a switch but a value belonging to a prior switch
-        private enum ArgumnetType
+        private enum ArgumentType
         {
             BinarySwitch,
             ValueSwitch, //Int, String, Quouted List
@@ -29,14 +29,14 @@ namespace CommandLineParserPoC
             // But no more than one value switch
             public SwitchDescription ValueSwitch { get; set; }
             // Calculates what ArgumentType this Argument is of
-            public ArgumnetType ArgumnetType
+            public ArgumentType ArgumentType
             {
                 get
                 {
                     // If we have neither binary nor value switches in the args[x] then it's not a switch but a value
                     if (BinarySwitches == null && ValueSwitch == null)
                     {
-                        return ArgumnetType.Value;
+                        return ArgumentType.Value;
                     }
 
                     // If we have a value switch, then the token type is determined by the type of the switch (see below)
@@ -46,22 +46,22 @@ namespace CommandLineParserPoC
                     }
 
                     // This is a binary switch then, so it takes no value
-                    return ArgumnetType.BinarySwitch;
+                    return ArgumentType.BinarySwitch;
                 }
             }
-            private static ArgumnetType MapSwitchTypeToTokenType(SwitchDescription sd)
+            private static ArgumentType MapSwitchTypeToTokenType(SwitchDescription sd)
             {
-                return new Dictionary<SwitchType, ArgumnetType>
+                return new Dictionary<SwitchType, ArgumentType>
                 {
-                    { SwitchType.Binary, ArgumnetType.BinarySwitch},
-                    { SwitchType.Value, ArgumnetType.ValueSwitch},
-                    { SwitchType.List, ArgumnetType.ListSwitch},
+                    { SwitchType.Binary, ArgumentType.BinarySwitch},
+                    { SwitchType.Value, ArgumentType.ValueSwitch},
+                    { SwitchType.List, ArgumentType.ListSwitch},
                 }[sd.Type];
             }
         }
 
-        private readonly TextParser<Argument> _withoutValue; // matches purely binary switches
-        private readonly TextParser<Argument> _withValue; // matches switches that include a value switch
+        private readonly TextParser<Argument> _tokenizer;
+        private readonly SwitchDescription[] _switches;
 
         // This is to bootstrap the "Or" aggregation for span parsers for all given long switches
         // E.g "--all-that", "--bugger-all", etc. I'd rather not have that and get Superpower to provide
@@ -97,11 +97,17 @@ namespace CommandLineParserPoC
 
         public CommandLineParser(SwitchDescription[] switches)
         {
+            _switches = switches;
+            _tokenizer = BuildTokenizer();
+        }
+
+        private TextParser<Argument> BuildTokenizer()
+        {
             // Parses a single args[x] and returns SwitchDescription for it if matches. First let's deal with short names: "-abcd"
             // There can be many of those in a single swich, any number of binary ones and zero or one value one.
-            TextParser<SwitchDescription> binarySwitchShort = GetSwitchParser(switches, isBinary: true, isShort: true);
-            TextParser<SwitchDescription> valueSwitchShort = GetSwitchParser(switches, isBinary: false, isShort: true);
-
+            TextParser<SwitchDescription> binarySwitchShort = GetSwitchParser(_switches, isBinary: true, isShort: true);
+            TextParser<SwitchDescription> valueSwitchShort = GetSwitchParser(_switches, isBinary: false, isShort: true);
+            
             // Zero or one value switch is allowed
             TextParser<Argument> intermediate =
                 from first in binarySwitchShort.Many()
@@ -114,8 +120,8 @@ namespace CommandLineParserPoC
             TextParser<Argument> withoutValueShort = Character.In('/', '-').Then(x => binarySwitchShort.Many().Select(u => new Argument { BinarySwitches = u }));
 
             // Now let's deal with the long names "--all-that" for long ones obvious only a single switch can be present in a single args[x]
-            TextParser<SwitchDescription> binarySwitchLong = GetSwitchParser(switches, isBinary: true, isShort: false);
-            TextParser<SwitchDescription> valueSwitchLong = GetSwitchParser(switches, isBinary: false, isShort: false);
+            TextParser<SwitchDescription> binarySwitchLong = GetSwitchParser(_switches, isBinary: true, isShort: false);
+            TextParser<SwitchDescription> valueSwitchLong = GetSwitchParser(_switches, isBinary: false, isShort: false);
 
             // Adding switch prefix and converting from SwitchDescription to Argument
             // Later tokenizer needs Argument to determine Argument Type
@@ -127,25 +133,24 @@ namespace CommandLineParserPoC
             // It feels inefficient, I'd rather pass already parsed args[x]'s to parser from tokenizer
             // But unfortunately each Token is always TextSpan based. I wonder if Superpower can change to make Token generic
             // so that it could use any type, not just TextSpan.
-            _withoutValue = withoutValueLong.Try().Or(withoutValueShort).AtEnd();
-            _withValue = withValueLong.Try().Or(withValueShort).AtEnd();
+            TextParser<Argument> withoutValue = withoutValueLong.Try().Or(withoutValueShort).AtEnd();
+            TextParser<Argument> withValue = withValueLong.Try().Or(withValueShort).AtEnd();
+            // Three possible options: argument that does not require a value, argument that requires one ore more values, or a value
+            // If we did not match an argument whatever is left must be value
+            TextParser<Argument> any = Character.AnyChar.Many().Value(new Argument()).AtEnd();
+            // Try our three options
+            return withoutValue.Try().Or(withValue).Try().Or(any);
 
         }
 
         // Okay, now all ground work is done, let convert all our args to the Token List
-        private TokenList<ArgumnetType> Tokenize(string[] args)
+        private TokenList<Argument> Tokenize(string[] args)
         {
             try
             {
-                // Three possible options: argument that does not require a value, argument that requires one ore more values, or a value
-                // If we did not match an argument whatever is left must be value
-                TextParser<Argument> any = Character.AnyChar.Many().Value(new Argument()).AtEnd();
-                // Try our three options
-                TextParser<Argument> tokenizer = _withoutValue.Try().Or(_withValue).Try().Or(any);
                 // Run the tokenizer now. The output of the tokenizer for each args[x] is and Argument instance which we use to construct the token
                 // Pitty we have to use TextSpan and will have to re-parse that again in the parser
-                return new TokenList<ArgumnetType>(args
-                    .Select(a => new Token<ArgumnetType>(tokenizer.Parse(a).ArgumnetType, new TextSpan(a))).ToArray());
+                return new TokenList<Argument>(args.Select(a => new Token<Argument>(_tokenizer.Parse(a), new TextSpan(a))).ToArray());
             } catch (ParseException ex)
             {
                 throw new CommandLineParserException(ex.Message,ex);
@@ -165,27 +170,46 @@ namespace CommandLineParserPoC
             }
             return Unit.Value;
         }
-        private void Parse(TokenList<ArgumnetType> tokens)
+        
+        private delegate bool TokenMatcher<in TKind>(TKind input);
+        
+        private static TokenListParser<TKind, Token<TKind>> TokenValueEqualTo<TKind>(TokenMatcher<TKind> condition)
+        {
+            // Add appropriate expectaction as an (optional) parameter to this method and write code to process it
+            // var expectations = new[] { Presentation.FormatExpectation(kind) };
+
+            return input =>
+            {
+                var next = input.ConsumeToken();
+                if (!next.HasValue || !condition(next.Value.Kind))
+                    return TokenListParserResult.Empty<TKind, Token<TKind>>(input /*, expectations*/);
+
+                return next;
+            };
+        }
+
+
+        private void Parse(TokenList<Argument> tokens)
         {
             // Three possible options: argument that does not require a value, argument that requires a single value or argument requiring a list of values
-            // Note how .Apply re-parser the argument that we already parsed in the tokenized
+            // Note how .Apply re-parses the argument that we already parsed in the tokenizer
             // Also note that SetSwitchValue is called to call the parsed value setter given to us from the outside world
-            TokenListParser<ArgumnetType, Unit> binary =
-                from sw in Token.EqualTo(ArgumnetType.BinarySwitch).Apply(x => _withoutValue)
-                select SetSwitchValue(sw, null);
-
-            TokenListParser<ArgumnetType, Unit> single =
-                from sw in Token.EqualTo(ArgumnetType.ValueSwitch).Apply(x => _withValue)
-                from val in Token.EqualTo(ArgumnetType.Value)
-                select SetSwitchValue(sw, val.ToStringValue());
-
-            TokenListParser<ArgumnetType, Unit> list =
-                from sw in Token.EqualTo(ArgumnetType.ListSwitch).Apply(x => _withValue)
-                from val in Token.EqualTo(ArgumnetType.Value).AtLeastOnce()
-                select SetSwitchValue(sw, string.Join(" ", val.Select(v => v.ToStringValue())));
+            TokenListParser<Argument, Unit> binary =
+                from sw in TokenValueEqualTo<Argument>(x => x.ArgumentType ==  ArgumentType.BinarySwitch)
+                select SetSwitchValue(sw.Kind, null);
+           
+            TokenListParser<Argument, Unit> single =
+                from sw in TokenValueEqualTo<Argument>(x => x.ArgumentType ==  ArgumentType.ValueSwitch)
+                from val in TokenValueEqualTo<Argument>(x => x.ArgumentType ==  ArgumentType.Value)
+                select SetSwitchValue(sw.Kind, val.ToStringValue());
+            
+            TokenListParser<Argument, Unit> list =
+                from sw in TokenValueEqualTo<Argument>(x => x.ArgumentType ==  ArgumentType.ListSwitch)
+                from val in TokenValueEqualTo<Argument>(x => x.ArgumentType ==  ArgumentType.Value).AtLeastOnce()
+                select SetSwitchValue(sw.Kind, string.Join(" ", val.Select(v => v.ToStringValue())));
 
             // Let's try all the three one after another
-            TokenListParser<ArgumnetType, Unit[]> parser = binary.Try().Or(single).Try().Or(list).Many().AtEnd();
+            TokenListParser<Argument, Unit[]> parser = binary.Try().Or(single).Try().Or(list).Many().AtEnd();
 
             try
             {
