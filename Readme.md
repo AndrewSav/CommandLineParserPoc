@@ -10,8 +10,5 @@
  - Both binary and value switches can have a long or a short form
  - Switches can have either long or short form or both
  - Several short switches can be comnibed into one: `-abcd`. This combination cannot contain more than one value switch.
- - There are four types of value switches: integer (non-negative), string, list (e.g `--servers server1 server2 server3`) and quoted list.
- - Quoted list looks like this: `--switches-to-pass-through "-a something -b -c"`.  
- - The quoted part will be sent as a single array element to the C# program from command line. Note that quotes themselves are not passed by OS to the argument list.
- - Whatever is inside the quoted list value does not need to be paresed further.
+ - There are two types of value switches: string and list (e.g `--servers server1 server2 server3`).
  - It expected that the parser is aware of the type of every switch, so that if it's a value switch it will know to treat the subsequent input array item as the switch argument (or several argurments for list switches).
