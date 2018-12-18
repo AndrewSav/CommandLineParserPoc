@@ -4,7 +4,7 @@ using Superpower.Model;
 
 namespace CommandLineParserPoC.Superpower
 {
-    internal class TokenExtension
+    internal static class TokenExtension
     {
         public static TokenListParser<TKind, Token<TKind>> Matching<TKind>(Func<TKind, bool> predicate, string name)
         {
