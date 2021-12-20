@@ -142,6 +142,7 @@ namespace CommandLineParserPoC
         }
 
         // This is called by the parser when it knows an argument and all its values
+        // so they can be passed back to the caller by executing `SetValue`
         private Unit SetSwitchValue(Argument sw, string val)
         {
             sw.ValueSwitch?.SetValue(val);

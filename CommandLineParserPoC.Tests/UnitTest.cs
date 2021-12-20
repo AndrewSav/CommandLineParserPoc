@@ -201,7 +201,7 @@ namespace CommandLineParserPoC.Tests
 
             CommandLineParser.Parse(new[] { "-a", "77" }, sd);
             Assert.AreEqual(o.Int1, 77);
-        }        
+        }
         [TestMethod]
         public void TestList()
         {
@@ -298,6 +298,367 @@ namespace CommandLineParserPoC.Tests
 
             Assert.ThrowsException<CommandLineParserException>(() => CommandLineParser.Parse(new[] { "-a", "Hello", "World" }, sd));
 
+        }
+
+        [TestMethod]
+        public void TestBinariesAndIntInFront()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Value,
+                    SetValue = a =>
+                    {
+                        int v;
+                        if (!int.TryParse(a, out v))
+                        {
+                            throw new ArgumentOutOfRangeException($"You tried to pass value {a} for integer option --all-that. It does not appear to be that integer");
+                        }
+                        o.Int1 = v;
+                    }
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-ebcd", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.Int1, 77);
+        }
+        [TestMethod]
+        public void TestBinariesAndIntInMiddle()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Value,
+                    SetValue = a =>
+                    {
+                        int v;
+                        if (!int.TryParse(a, out v))
+                        {
+                            throw new ArgumentOutOfRangeException($"You tried to pass value {a} for integer option --all-that. It does not appear to be that integer");
+                        }
+                        o.Int1 = v;
+                    }
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-bced", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.Int1, 77);
+        }
+        [TestMethod]
+        public void TestBinariesAndIntAtEnd()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Value,
+                    SetValue = a =>
+                    {
+                        int v;
+                        if (!int.TryParse(a, out v))
+                        {
+                            throw new ArgumentOutOfRangeException($"You tried to pass value {a} for integer option --all-that. It does not appear to be that integer");
+                        }
+                        o.Int1 = v;
+                    }
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-bcde", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.Int1, 77);
+        }
+
+        [TestMethod]
+        public void TestBinariesAndListInFront()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.List,
+                    SetValue = a => o.List1 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-ebcd", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.List1[0], "77");
+            Assert.AreEqual(o.List1.Length, 1);
+        }
+        [TestMethod]
+        public void TestBinariesAndListInMiddle()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.List,
+                    SetValue = a => o.List1 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-becd", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.List1[0], "77");
+            Assert.AreEqual(o.List1.Length, 1);
+        }
+        [TestMethod]
+        public void TestBinariesAndListAtEnd()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.List,
+                    SetValue = a => o.List1 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
+                },
+            };
+
+            CommandLineParser.Parse(new[] { "-bcde", "77" }, sd);
+
+            Assert.AreEqual(o.Binary2, true);
+            Assert.AreEqual(o.Binary3, true);
+            Assert.AreEqual(o.Binary4, true);
+            Assert.AreEqual(o.List1[0], "77");
+            Assert.AreEqual(o.List1.Length, 1);
+        }
+        [TestMethod]
+        public void TestMoreThanOneNonBinary()
+        {
+            Options o = new Options();
+
+            SwitchDescription[] sd = {
+                new SwitchDescription
+                {
+                    ShortName = 'b',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary2 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'c',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary3 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'd',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.Binary,
+                    SetValue = a => o.Binary4 = true
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'e',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.List,
+                    SetValue = a => o.List1 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
+                },
+                new SwitchDescription
+                {
+                    ShortName = 'f',
+                    LongName = null,
+                    Description = "Desc 1",
+                    Type = SwitchType.List,
+                    SetValue = a => o.List2 = a.Split(' ').Select(x => x.Trim()).Where(x=>!string.IsNullOrWhiteSpace(x)).ToArray()
+                },
+            };
+
+            Assert.ThrowsException<CommandLineParserException>(() => CommandLineParser.Parse(new[] { "-bfcde", "77" }, sd));
         }
     }
 }
