@@ -23,7 +23,7 @@ namespace CommandLineParserPoC
         // This class describes a single argument from the passed on command line argument array string args[]
         private class Argument
         {
-            // May have multiple binary switches
+            // A single command line argument may represemt multiple binary switches
             public IEnumerable<SwitchDescription> BinarySwitches { get; set; }
 
             // But no more than one value switch
@@ -40,7 +40,7 @@ namespace CommandLineParserPoC
                         return ArgumentType.Value;
                     }
 
-                    // If we have a value switch, then the token type is determined by the type of the switch (see below)
+                    // If we have a value switch, then the argument type is determined by the type of the switch (see below)
                     if (ValueSwitch != null)
                     {
                         return MapSwitchTypeToTokenType(ValueSwitch);
@@ -78,9 +78,9 @@ namespace CommandLineParserPoC
             // Get all the switches long names
             IEnumerable<string> names = switches.Where(x => x.Type == SwitchType.Binary == isBinary && x.LongName != null).Select(x => x.LongName);
             // Construct a parser that parses such a name and returns the corresponding SwitchDescription
-            return Superpower.Parse.OneOf(names.Select(x=> Span.EqualTo(x).Try()).ToArray()).Select(x => switches.First(s => s.LongName == x.ToStringValue()));
+            return Superpower.Parse.OneOf(names.Select(x => Span.EqualTo(x).Try()).ToArray()).Select(x => switches.First(s => s.LongName == x.ToStringValue()));
         }
-        
+
         private CommandLineParser(SwitchDescription[] switches)
         {
             _switches = switches;
@@ -90,14 +90,14 @@ namespace CommandLineParserPoC
         private TextParser<Argument> BuildTokenizer()
         {
             // Parses a single args[x] and returns SwitchDescription for it if matches. First let's deal with short names: "-abcd"
-            // There can be many of those in a single swich, any number of binary ones and zero or one value one.
+            // There can be many of those in a single swich, any number of binary ones and zero or one non-binary one.
             TextParser<SwitchDescription> binarySwitchShort = GetShortSwitchParser(_switches, isBinary: true);
-            TextParser<SwitchDescription> valueSwitchShort = GetShortSwitchParser(_switches, isBinary: false);
+            TextParser<SwitchDescription> nonBinarySwitchShort = GetShortSwitchParser(_switches, isBinary: false);
 
             // Zero or one value switch is allowed
             TextParser<Argument> intermediate =
                 from first in binarySwitchShort.Many()
-                from second in valueSwitchShort.OptionalOrDefault()
+                from second in nonBinarySwitchShort
                 from third in binarySwitchShort.Many()
                 select new Argument {BinarySwitches = first.Concat(third), ValueSwitch = second};
 
@@ -108,11 +108,11 @@ namespace CommandLineParserPoC
 
             // Now let's deal with the long names "--all-that" for long ones obvious only a single switch can be present in a single args[x]
             TextParser<SwitchDescription> binarySwitchLong = GetLongSwitchParser(_switches, isBinary: true);
-            TextParser<SwitchDescription> valueSwitchLong = GetLongSwitchParser(_switches, isBinary: false);
+            TextParser<SwitchDescription> nonBinarySwitchLong = GetLongSwitchParser(_switches, isBinary: false);
 
             // Adding switch prefix and converting from SwitchDescription to Argument
             // Later tokenizer needs Argument to determine Argument Type
-            TextParser<Argument> withValueLong = Span.EqualTo("--").Then(x => valueSwitchLong)
+            TextParser<Argument> withValueLong = Span.EqualTo("--").Then(x => nonBinarySwitchLong)
                 .Select(u => new Argument {ValueSwitch = u});
             TextParser<Argument> withoutValueLong = Span.EqualTo("--").Then(x => binarySwitchLong)
                 .Select(u => new Argument {BinarySwitches = new[] {u}});
@@ -141,7 +141,7 @@ namespace CommandLineParserPoC
             }
         }
 
-        // This is called by the parser when its know an argument and all its values
+        // This is called by the parser when it knows an argument and all its values
         private Unit SetSwitchValue(Argument sw, string val)
         {
             sw.ValueSwitch?.SetValue(val);
