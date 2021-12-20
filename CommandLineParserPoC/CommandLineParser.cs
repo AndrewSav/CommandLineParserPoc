@@ -3,7 +3,6 @@ using Superpower.Model;
 using Superpower.Parsers;
 using System.Collections.Generic;
 using System.Linq;
-using CommandLineParserPoC.Superpower;
 
 namespace CommandLineParserPoC
 {
@@ -79,7 +78,7 @@ namespace CommandLineParserPoC
             // Get all the switches long names
             IEnumerable<string> names = switches.Where(x => x.Type == SwitchType.Binary == isBinary && x.LongName != null).Select(x => x.LongName);
             // Construct a parser that parses such a name and returns the corresponding SwitchDescription
-            return CombinatorsExtention.OneOf(true, names.Select(Span.EqualTo).ToArray()).Select(x => switches.First(s => s.LongName == x.ToStringValue()));
+            return Superpower.Parse.OneOf(names.Select(x=> Span.EqualTo(x).Try()).ToArray()).Select(x => switches.First(s => s.LongName == x.ToStringValue()));
         }
         
         private CommandLineParser(SwitchDescription[] switches)
@@ -162,17 +161,17 @@ namespace CommandLineParserPoC
             // Three possible options: argument that does not require a value, argument that requires a single value or argument requiring a list of values
             // Note that SetSwitchValue is called to call the parsed value setter given to us from the outside world
             TokenListParser<Argument, Unit> binary =
-                from sw in TokenExtension.Matching<Argument>(x => x.ArgumentType == ArgumentType.BinarySwitch, "binary switch")
+                from sw in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.BinarySwitch, "binary switch")
                 select SetSwitchValue(sw.Kind, null);
 
             TokenListParser<Argument, Unit> single =
-                from sw in TokenExtension.Matching<Argument>(x => x.ArgumentType == ArgumentType.ValueSwitch, "value switch")
-                from val in TokenExtension.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value")
+                from sw in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.ValueSwitch, "value switch")
+                from val in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value")
                 select SetSwitchValue(sw.Kind, val.ToStringValue());
 
             TokenListParser<Argument, Unit> list =
-                from sw in TokenExtension.Matching<Argument>(x => x.ArgumentType == ArgumentType.ListSwitch, "list switch")
-                from val in TokenExtension.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value").AtLeastOnce()
+                from sw in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.ListSwitch, "list switch")
+                from val in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value").AtLeastOnce()
                 select SetSwitchValue(sw.Kind, string.Join(" ", val.Select(v => v.ToStringValue())));
 
             // Let's try all the three one after another
