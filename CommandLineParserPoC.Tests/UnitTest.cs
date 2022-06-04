@@ -660,5 +660,26 @@ namespace CommandLineParserPoC.Tests
 
             Assert.ThrowsException<CommandLineParserException>(() => CommandLineParser.Parse(new[] { "-bfcde", "77" }, sd));
         }
+        //[TestMethod]
+        //public void TestErrorMessageWhenValueIsUnexpected()
+        //{
+        //    Options o = new Options();
+
+        //    SwitchDescription[] sd = {
+        //        new SwitchDescription
+        //        {
+        //            ShortName = 'a',
+        //            LongName = "all-that",
+        //            Description = "Desc 1",
+        //            Type = SwitchType.Binary,
+        //            SetValue = a => o.Binary1 = true
+        //        }
+        //    };
+
+        //    CommandLineParser.Parse(new[] { "not_a_switch" }, sd);
+
+        //    Assert.AreEqual(o.Binary1, true);
+
+        //}
     }
 }

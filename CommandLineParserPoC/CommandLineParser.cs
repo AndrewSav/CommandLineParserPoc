@@ -1,6 +1,7 @@
 ﻿using Superpower;
 using Superpower.Model;
 using Superpower.Parsers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -174,6 +175,10 @@ namespace CommandLineParserPoC
                 from sw in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.ListSwitch, "list switch")
                 from val in Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value").AtLeastOnce()
                 select SetSwitchValue(sw.Kind, string.Join(" ", val.Select(v => v.ToStringValue())));
+
+            //TokenListParser<Argument, Unit> value = Superpower.Parse.Not(Token.Matching<Argument>(x => x.ArgumentType == ArgumentType.Value, "value"))
+            //   .Named("switch");
+            //TokenListParser<Argument, Unit[]> parser = value.Try().Or(binary).Try().Or(single).Try().Or(list).Many().AtEnd();
 
             // Let's try all the three one after another
             TokenListParser<Argument, Unit[]> parser = binary.Try().Or(single).Try().Or(list).Many().AtEnd();
